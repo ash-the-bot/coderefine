@@ -1,0 +1,14 @@
+# Backend secrets
+backend/.env
+
+# Frontend local config (holds Supabase keys, API base, etc.)
+frontend/config.local.js
+
+# Python
+backend/.venv/
+__pycache__/
+
+# Misc
+.DS_Store
+Thumbs.db
+

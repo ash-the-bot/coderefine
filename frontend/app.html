@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+
+<head>
+  <meta charset="utf-8" />
+  <title>Coderefine – AI Code Workbench</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="./styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./config.local.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js"></script>
+</head>
+
+<body>
+
+  <div id="app-root" class="app-shell">
+
+    <!-- ══ TOPBAR ══════════════════════════════════════════════ -->
+    <header class="app-topbar">
+      <div class="topbar-brand">
+        <!-- Sidebar toggle button -->
+        <button id="btn-sidebar-toggle" class="topbar-icon-btn" title="Toggle Sidebar (Ctrl+B)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+        <div class="brand-mark">CR</div>
+        <span class="brand-title">Coderefine</span>
+        <span class="brand-badge">AI Workbench</span>
+      </div>
+
+      <div class="topbar-controls">
+        <!-- Language Selector -->
+        <div class="control-group">
+          <label class="ctrl-label">Language</label>
+          <select id="language-select" class="select">
+            <option value="python">Python</option>
+            <option value="javascript">JavaScript</option>
+            <option value="java">Java</option>
+            <option value="c">C</option>
+            <option value="cpp">C++</option>
+            <option value="rust">Rust</option>
+          </select>
+        </div>
+
+        <!-- Goal Selector -->
+        <div class="control-group">
+          <label class="ctrl-label">Objective</label>
+          <select id="goal-select" class="select" style="min-width:160px;">
+            <option value="Improve readability, performance, and structure">General Polish</option>
+            <option value="Optimize for speed and algorithmic performance">Optimize Performance</option>
+            <option value="Make the code more concise and idiomatic">Make Idiomatic</option>
+            <option value="Add comments and improve variable names">Document Code</option>
+            <option value="Find and fix potential bugs">Find Bugs</option>
+          </select>
+        </div>
+
+        <div class="topbar-actions">
+          <!-- File actions -->
+          <button id="btn-format" class="topbar-btn" title="Format (Alt+Shift+F)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="14 2 18 6 7 17 3 17 3 13 14 2" />
+              <line x1="3" y1="22" x2="21" y2="22" />
+            </svg>
+            Format
+          </button>
+          <button id="btn-save" class="topbar-btn" title="Save (Ctrl+S)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+              <polyline points="17 21 17 13 7 13 7 21" />
+              <polyline points="7 3 7 8 15 8" />
+            </svg>
+            Save
+          </button>
+          <button id="btn-load" class="topbar-btn" title="Load last Snippet">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            Load
+          </button>
+          <div class="topbar-divider"></div>
+          <!-- Refine CTA -->
+          <button id="btn-refine" class="btn btn-primary refine-btn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path
+                d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
+            </svg>
+            Refine with AI
+          </button>
+        </div>
+
+        <div class="topbar-divider"></div>
+        <!-- Status + Sign Out -->
+        <div class="topbar-status">
+          <div id="status-indicator" class="status-indicator"></div>
+          <button id="btn-logout" class="topbar-btn topbar-btn-subtle">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            Sign Out
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- ══ MAIN LAYOUT (Sidebar + Editor + AI) ═══════════════════ -->
+    <div class="app-layout">
+
+      <!-- ══ LEFT SIDEBAR ═══════════════════════════════════════ -->
+      <aside id="left-sidebar" class="left-sidebar">
+
+        <!-- Sidebar inner (scrollable content) -->
+        <div class="sidebar-inner">
+
+          <!-- SECTION: Actions -->
+          <div class="sidebar-section">
+            <button class="sidebar-item sidebar-item-primary" id="sb-new-file">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="12" y1="18" x2="12" y2="12" />
+                <line x1="9" y1="15" x2="15" y2="15" />
+              </svg>
+              <span>New File</span>
+            </button>
+          </div>
+
+          <div class="sidebar-divider"></div>
+
+          <!-- SECTION: Navigate -->
+          <div class="sidebar-section">
+            <div class="sidebar-label">Navigate</div>
+            <button class="sidebar-item active" id="sb-dashboard">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="7" height="7" />
+                <rect x="14" y="3" width="7" height="7" />
+                <rect x="14" y="14" width="7" height="7" />
+                <rect x="3" y="14" width="7" height="7" />
+              </svg>
+              <span>Dashboard</span>
+            </button>
+            <button class="sidebar-item" id="sb-history">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              <span>History</span>
+              <span class="sidebar-badge">3</span>
+            </button>
+            <button class="sidebar-item" id="sb-snippets">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="16 18 22 12 16 6" />
+                <polyline points="8 6 2 12 8 18" />
+              </svg>
+              <span>Snippets</span>
+            </button>
+            <button class="sidebar-item" id="sb-bookmarks">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+              </svg>
+              <span>Saved</span>
+            </button>
+          </div>
+
+          <div class="sidebar-divider"></div>
+
+          <!-- SECTION: Tools -->
+          <div class="sidebar-section">
+            <div class="sidebar-label">Tools</div>
+            <button class="sidebar-item" id="sb-diff">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
+              <span>Diff Viewer</span>
+            </button>
+            <button class="sidebar-item" id="sb-formatter">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="14 2 18 6 7 17 3 17 3 13 14 2" />
+                <line x1="3" y1="22" x2="21" y2="22" />
+              </svg>
+              <span>Formatter</span>
+            </button>
+            <button class="sidebar-item" id="sb-insights">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+              </svg>
+              <span>Insights</span>
+            </button>
+          </div>
+
+          <div class="sidebar-divider"></div>
+
+          <!-- SECTION: Notifications -->
+          <div class="sidebar-section">
+            <div class="sidebar-label">Activity</div>
+            <button class="sidebar-item" id="sb-notifications">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+              <span>Notifications</span>
+              <span class="sidebar-badge sidebar-badge-dot"></span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Sidebar Footer: Settings + Profile -->
+        <div class="sidebar-footer">
+          <div class="sidebar-divider"></div>
+          <button class="sidebar-item" id="sb-help">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            <span>Help & Docs</span>
+          </button>
+          <button class="sidebar-item" id="sb-settings">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3" />
+              <path
+                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+            <span>Settings</span>
+          </button>
+          <!-- Profile row -->
+          <div class="sidebar-profile">
+            <div class="sidebar-avatar">U</div>
+            <div class="sidebar-profile-info">
+              <span class="sidebar-profile-name" id="sb-username">User</span>
+              <span class="sidebar-profile-plan">Free Plan</span>
+            </div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              style="margin-left:auto; flex-shrink:0; color:var(--fg-dim);">
+              <circle cx="12" cy="12" r="1" />
+              <circle cx="19" cy="12" r="1" />
+              <circle cx="5" cy="12" r="1" />
+            </svg>
+          </div>
+        </div>
+
+      </aside>
+
+      <!-- Overlay for mobile sidebar -->
+      <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+      <!-- ══ MAIN SPLIT LAYOUT ════════════════════════════════ -->
+      <div class="app-body">
+
+
+        <!-- LEFT: Code Editor -->
+        <div class="editor-pane">
+          <!-- Editor file tab strip -->
+          <div class="editor-tabstrip">
+            <div class="file-tab active">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+              </svg>
+              <span id="file-name-badge">scratch.py</span>
+            </div>
+            <div class="tabstrip-fill"></div>
+            <div class="tabstrip-metrics">
+              <span class="metric-chip">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="3" y1="6" x2="21" y2="6" />
+                  <line x1="3" y1="12" x2="21" y2="12" />
+                  <line x1="3" y1="18" x2="21" y2="18" />
+                </svg>
+                Ln <span id="metric-lines">0</span>
+              </span>
+              <span class="metric-chip">Ch <span id="metric-chars">0</span></span>
+              <span class="metric-chip cxchip">Cx <span id="metric-complexity" data-complexity="low">0</span></span>
+              <span class="metric-chip langchip"><span id="metric-language">Python</span></span>
+            </div>
+          </div>
+
+          <!-- Monaco editor -->
+          <div id="editor-container" class="monaco-editor-wrap"></div>
+        </div>
+
+        <!-- RIGHT: AI Panel -->
+        <div class="ai-panel">
+
+          <!-- Panel header with tabs -->
+          <div class="ai-panel-header">
+            <div class="ai-tabs">
+              <button class="ai-tab active" data-panel="assistant">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M8 12h4l2-4" />
+                  <circle cx="12" cy="12" r="1" fill="currentColor" />
+                </svg>
+                Assistant
+              </button>
+              <button class="ai-tab" data-panel="insights">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                  <polyline points="17 6 23 6 23 12" />
+                </svg>
+                Insights
+              </button>
+              <button id="btn-diff" class="ai-tab">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                  <polyline points="12 5 19 12 12 19" />
+                </svg>
+                Diff
+              </button>
+            </div>
+          </div>
+
+          <!-- Assistant Panel -->
+          <div id="assistant-panel" class="ai-body">
+            <div class="chat-welcome">
+              <div class="chat-welcome-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path
+                    d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
+                </svg>
+              </div>
+              <p>Paste or write code in the editor.<br>Hit <strong>Refine with AI</strong> to improve it, or ask me
+                anything.</p>
+            </div>
+            <div id="chat-thread" class="chat-thread"></div>
+            <form id="chat-form" class="chat-composer">
+              <textarea id="chat-input" placeholder="Ask about your code... (Ctrl+Enter to send)"></textarea>
+              <button type="submit" class="btn btn-primary composer-send">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13" />
+                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                </svg>
+              </button>
+            </form>
+          </div>
+
+          <!-- Insights Panel -->
+          <div id="insights-panel" class="ai-body ai-body-hidden">
+            <div class="insights-empty">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+              </svg>
+              <p>Run a refinement to see detailed insights and improvement suggestions here.</p>
+            </div>
+            <div id="insights-summary" class="insights-summary" style="display:none;"></div>
+            <ul id="insights-list" class="insights-list"></ul>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ══ STATUSBAR ═══════════════════════════════════════════ -->
+    </div><!-- /.app-body -->
+  </div><!-- /.app-layout -->
+
+  <!-- ══ STATUSBAR ═══════════════════════════════════════════ -->
+  <div class="app-statusbar">
+    <div class="sb-left">
+      <span class="sb-item sb-remote">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+          <polyline points="15 3 21 3 21 9" />
+          <line x1="10" y1="14" x2="21" y2="3" />
+        </svg>
+        Groq · Llama 3.3 70B
+      </span>
+    </div>
+    <div class="sb-right">
+      <span class="sb-item">UTF-8</span>
+      <span class="sb-item">CRLF</span>
+      <span class="sb-item">Spaces: 4</span>
+    </div>
+  </div>
+
+  </div>
+
+  <!-- Hidden elements for JS compatibility -->
+  <div id="assistant-toggle" style="display:none;"></div>
+  <div class="theme-toggle-buttons" style="display:none;">
+    <button class="theme-pill theme-pill-active" data-theme-choice="dark">Dark</button>
+    <button class="theme-pill" data-theme-choice="light">Light</button>
+    <button class="theme-pill" data-theme-choice="nebula">Nebula</button>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+
+</html>

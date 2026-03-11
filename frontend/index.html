@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+
+<head>
+  <meta charset="utf-8" />
+  <title>Coderefine – AI Code Refinement Workbench</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="./styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./config.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow-x: hidden;
+    }
+
+    body {
+      background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0f1428 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      font-family: 'Sora', sans-serif;
+    }
+
+    /* Animated background particles */
+    .particle-field {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .particle {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      background: radial-gradient(circle, rgba(100, 200, 255, 0.8), rgba(100, 200, 255, 0));
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    /* Glassmorphic gradient orbs */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.3;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .orb-1 {
+      width: 400px;
+      height: 400px;
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      top: -100px;
+      left: -100px;
+      animation: float-slow 20s ease-in-out infinite;
+    }
+
+    .orb-2 {
+      width: 350px;
+      height: 350px;
+      background: linear-gradient(135deg, #06b6d4, #0891b2);
+      bottom: -50px;
+      right: -50px;
+      animation: float-slow 25s ease-in-out infinite reverse;
+    }
+
+    .orb-3 {
+      width: 300px;
+      height: 300px;
+      background: linear-gradient(135deg, #ec4899, #f43f5e);
+      top: 50%;
+      right: 10%;
+      animation: float-slow 22s ease-in-out infinite;
+      animation-delay: -10s;
+    }
+
+    @keyframes float-slow {
+      0%, 100% { transform: translate(0, 0); }
+      25% { transform: translate(50px, -50px); }
+      50% { transform: translate(-30px, 30px); }
+      75% { transform: translate(30px, 20px); }
+    }
+
+    /* Content wrapper */
+    .content-wrapper {
+      position: relative;
+      z-index: 10;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    .landing-hero {
+      max-width: 900px;
+      text-align: center;
+      animation: fade-in-up 1s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes fade-in-up {
+      from {
+        opacity: 0;
+        transform: translateY(40px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .logo-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 100px;
+      height: 100px;
+      border-radius: 30px;
+      margin: 0 auto 40px;
+      background: linear-gradient(135deg, rgba(79, 70, 229, 0.2), rgba(124, 58, 237, 0.2));
+      border: 2px solid rgba(79, 70, 229, 0.4);
+      font-size: 42px;
+      font-weight: 800;
+      background-clip: text;
+      -webkit-background-clip: text;
+      color: transparent;
+      background: linear-gradient(135deg, #64b5f6, #9c27b0);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      position: relative;
+      animation: logo-pulse 3s ease-in-out infinite;
+    }
+
+    @keyframes logo-pulse {
+      0%, 100% {
+        box-shadow: 0 0 20px rgba(79, 70, 229, 0.3);
+        transform: scale(1);
+      }
+      50% {
+        box-shadow: 0 0 40px rgba(79, 70, 229, 0.6);
+        transform: scale(1.05);
+      }
+    }
+
+    .landing-hero h1 {
+      font-family: 'Sora', sans-serif;
+      font-size: clamp(2.5rem, 8vw, 5.5rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      margin-bottom: 30px;
+      background: linear-gradient(135deg, #ffffff 0%, #e0e7ff 50%, #c7d2fe 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      position: relative;
+    }
+
+    .highlight {
+      background: linear-gradient(120deg, #64b5f6 0%, #a855f7 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      display: inline;
+    }
+
+    .landing-hero p {
+      font-size: clamp(1rem, 3vw, 1.3rem);
+      color: #cbd5e1;
+      line-height: 1.8;
+      margin-bottom: 50px;
+      max-width: 700px;
+      margin-left: auto;
+      margin-right: auto;
+      letter-spacing: 0.3px;
+    }
+
+    /* Dynamic CTA Button */
+    .cta-container {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 30px;
+    }
+
+    .btn-start {
+      position: relative;
+      padding: 18px 40px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      border: none;
+      border-radius: 16px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      color: white;
+      overflow: hidden;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 10px 30px rgba(79, 70, 229, 0.4);
+      font-family: 'Sora', sans-serif;
+    }
+
+    .btn-start::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+      transition: left 0.5s;
+    }
+
+    .btn-start:hover {
+      transform: translateY(-4px) scale(1.02);
+      box-shadow: 0 20px 50px rgba(79, 70, 229, 0.6);
+    }
+
+    .btn-start:hover::before {
+      left: 100%;
+    }
+
+    .btn-secondary {
+      position: relative;
+      padding: 18px 40px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      border: 2px solid rgba(100, 200, 255, 0.5);
+      border-radius: 16px;
+      cursor: pointer;
+      background: transparent;
+      color: #64b5f6;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(100, 200, 255, 0.1);
+      border-color: #64b5f6;
+      transform: translateY(-4px);
+      box-shadow: 0 15px 40px rgba(100, 200, 255, 0.2);
+    }
+
+    .arrow-icon {
+      transition: transform 0.3s ease;
+    }
+
+    .btn-start:hover .arrow-icon {
+      transform: translateX(4px);
+    }
+
+    .btn-secondary:hover .arrow-icon {
+      transform: translateX(4px);
+    }
+
+    /* Features row */
+    .features-row {
+      display: none;
+    }
+
+    /* Footer */
+    .footer {
+      position: relative;
+      z-index: 10;
+      padding: 20px;
+      text-align: center;
+      background: linear-gradient(to top, rgba(10, 14, 39, 0.8), transparent);
+      border-top: 1px solid rgba(100, 200, 255, 0.1);
+      margin-top: 0;
+    }
+
+    .footer p {
+      color: #64748b;
+      font-size: 0.95rem;
+      letter-spacing: 0.5px;
+      transition: color 0.3s ease;
+    }
+
+    .footer p:hover {
+      color: #94a3b8;
+    }
+
+    .team-link {
+      color: #64b5f6;
+      text-decoration: none;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      border-bottom: 1px solid transparent;
+    }
+
+    .team-link:hover {
+      border-bottom: 1px solid #64b5f6;
+      color: #a5d6ff;
+    }
+
+    /* Scroll indicator */
+    .scroll-indicator {
+      display: none;
+    }
+
+    /* Disable scrolling */
+    html, body {
+      overflow: hidden;
+      height: 100vh;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .landing-hero h1 {
+        font-size: 2.2rem;
+      }
+
+      .cta-container {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .btn-start, .btn-secondary {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .features-row {
+        gap: 20px;
+      }
+
+      .scroll-indicator {
+        display: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Animated particle field -->
+  <div class="particle-field" id="particleField"></div>
+
+  <!-- Glassmorphic orbs -->
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+
+  <!-- Main content -->
+  <div class="content-wrapper">
+    <div class="landing-hero">
+      <div class="logo-badge">CR</div>
+      
+      <h1>
+        Ship better code,<br />
+        <span class="highlight">faster than ever.</span>
+      </h1>
+      
+      <p>
+        Coderefine is an AI‑powered workbench providing instant refinements, insights, and chat directly alongside your code. Elevate your development workflow with intelligent assistance.
+      </p>
+
+      <div class="cta-container">
+        <a href="auth.html" class="btn-start">
+          Start Refining
+          <svg class="arrow-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+            stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12" />
+            <polyline points="12 5 19 12 12 19" />
+          </svg>
+        </a>
+      </div>
+    </div>
+
+    <div class="scroll-indicator" id="scrollIndicator"></div>
+  </div>
+
+  <!-- Footer with team credit -->
+  <footer class="footer">
+    <p>Crafted with ❤️ by <span class="team-link">Team AlphaRefine</span></p>
+  </footer>
+
+  <!-- Particle animation script -->
+  <script>
+    // Create animated particles
+    function createParticles() {
+      const field = document.getElementById('particleField');
+      const particleCount = 50;
+
+      for (let i = 0; i < particleCount; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'particle';
+        particle.style.left = Math.random() * 100 + '%';
+        particle.style.top = Math.random() * 100 + '%';
+        particle.style.opacity = Math.random() * 0.5 + 0.2;
+        particle.style.animation = `twinkle ${Math.random() * 3 + 2}s infinite ease-in-out`;
+        field.appendChild(particle);
+      }
+
+      // Add keyframe animation for particles
+      const style = document.createElement('style');
+      style.textContent = `
+        @keyframes twinkle {
+          0%, 100% { opacity: 0.2; }
+          50% { opacity: 0.8; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    // Hide scroll indicator on scroll
+    // Scrolling is disabled, so this is not needed
+    let hasScrolled = false;
+
+    // Initialize particles on load
+    document.addEventListener('DOMContentLoaded', () => {
+      createParticles();
+    });
+
+    // Auth check
+    document.addEventListener("DOMContentLoaded", async () => {
+      const config = window.CODEREFINE_CONFIG || {};
+      if (config.SUPABASE_URL && config.SUPABASE_ANON_KEY && window.supabase) {
+        const client = window.supabase.createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY);
+        const { data } = await client.auth.getSession();
+        if (data && data.session) {
+          window.location.href = "app.html";
+        }
+      }
+    });
+  </script>
+</body>
+
+</html>
